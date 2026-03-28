@@ -5,8 +5,18 @@ let currentFilter = 'all';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    if (!currentUser) {
+    const isPublicPage = window.location.pathname.endsWith('index.html') || 
+                         window.location.pathname.endsWith('signup.html') ||
+                         window.location.pathname === '/' ||
+                         window.location.pathname === '';
+
+    if (!currentUser && !isPublicPage) {
         window.location.href = 'index.html';
+        return;
+    }
+
+    if (currentUser && isPublicPage) {
+        window.location.href = 'dashboard.html';
         return;
     }
 

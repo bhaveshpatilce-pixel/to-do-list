@@ -37,11 +37,6 @@
 
     <script src="js/script.js"></script>
     <script>
-        // Check if already logged in
-        if (localStorage.getItem('todo_user')) {
-            window.location.href = 'dashboard.html';
-        }
-
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
