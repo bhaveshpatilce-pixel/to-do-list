@@ -3,17 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | To-Do Elite</title>
-    <meta name="description" content="Secure login for your personal to-do list manager.">
+    <title>Sign Up | To-Do Elite</title>
+    <meta name="description" content="Join To-Do Elite and start managing your tasks with ease.">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="glass-card">
-            <h1>Welcome Back</h1>
-            <p class="subtitle">Enter your credentials to manage your tasks</p>
+            <h1>Create Account</h1>
+            <p class="subtitle">Join To-Do Elite and stay organized</p>
             
-            <form id="loginForm">
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" placeholder="John Doe" required>
+                </div>
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input type="email" id="email" placeholder="name@example.com" required>
@@ -22,13 +26,13 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="btn-primary" id="loginBtn">
-                    <span class="btn-text-content">Sign In</span>
+                <button type="submit" class="btn-primary" id="signupBtn">
+                    <span class="btn-text-content">Create Account</span>
                 </button>
             </form>
             
             <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
-                Don't have an account? <a href="signup.html" style="color: var(--accent); text-decoration: none;">Create one here</a>
+                Already have an account? <a href="index.html" style="color: var(--accent); text-decoration: none;">Sign in here</a>
             </p>
         </div>
     </div>
@@ -37,42 +41,37 @@
 
     <script src="js/script.js"></script>
     <script>
-        // Check if already logged in
-        if (localStorage.getItem('todo_user')) {
-            window.location.href = 'dashboard.html';
-        }
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
-            const btn = document.getElementById('loginBtn');
+            const btn = document.getElementById('signupBtn');
             const btnText = btn.querySelector('.btn-text-content');
-            btnText.textContent = 'Authenticating...';
+            btnText.textContent = 'Creating Account...';
             btn.disabled = true;
 
             try {
-                const response = await fetch('http://localhost:8080/api/auth/login', {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ name, email, password })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    localStorage.setItem('todo_user', JSON.stringify(data));
-                    showToast('Welcome back, ' + data.name + '!', 'success');
-                    setTimeout(() => window.location.href = 'dashboard.html', 1000);
+                    showToast('Account created successfully!', 'success');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
                 } else {
-                    showToast(data.error || 'Invalid credentials', 'error');
-                    btnText.textContent = 'Sign In';
+                    showToast(data.error || 'Signup failed', 'error');
+                    btnText.textContent = 'Create Account';
                     btn.disabled = false;
                 }
             } catch (err) {
                 showToast('Server connection failed', 'error');
-                btnText.textContent = 'Sign In';
+                btnText.textContent = 'Create Account';
                 btn.disabled = false;
             }
         });
