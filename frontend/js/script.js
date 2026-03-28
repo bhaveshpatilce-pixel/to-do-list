@@ -1,9 +1,85 @@
-const API_BASE = 'https://to-do-list-production-3fea.up.railway.app/api';
-let currentUser = JSON.parse(localStorage.getItem('todo_user'));
+// Mock Backend - Using LocalStorage for "formality"
+const STORAGE_KEYS = {
+    USERS: 'todo_elite_users',
+    TASKS: 'todo_elite_tasks',
+    SESSION: 'todo_user'
+};
+
+// Global State
+let currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSION));
 let currentTasks = [];
 let currentFilter = 'all';
 
-// Initialize
+// -------------------------------------------------------------------
+// AUTHENTICATION LOGIC (Frontend Only)
+// -------------------------------------------------------------------
+const AuthService = {
+    signup: (name, email, password) => {
+        const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+        if (users.find(u => u.email === email)) {
+            throw new Error('Email already exists');
+        }
+        
+        const newUser = { id: Date.now().toString(), name, email, password };
+        users.push(newUser);
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        return newUser;
+    },
+
+    login: (email, password) => {
+        const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+        const user = users.find(u => u.email === email && u.password === password);
+        if (!user) throw new Error('Invalid email or password');
+        
+        localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(user));
+        return user;
+    },
+
+    logout: () => {
+        localStorage.removeItem(STORAGE_KEYS.SESSION);
+        window.location.href = 'index.html';
+    }
+};
+
+// -------------------------------------------------------------------
+// TASK MANAGEMENT LOGIC (Frontend Only)
+// -------------------------------------------------------------------
+const TaskService = {
+    getTasks: (userId) => {
+        const allTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+        return allTasks.filter(t => t.userId === userId);
+    },
+
+    addTask: (title, userId) => {
+        const allTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+        const newTask = {
+            id: Date.now().toString(),
+            title,
+            completed: false,
+            userId
+        };
+        allTasks.push(newTask);
+        localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(allTasks));
+        return newTask;
+    },
+
+    updateTask: (id, updates) => {
+        let allTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+        allTasks = allTasks.map(t => t.id === id ? { ...t, ...updates } : t);
+        localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(allTasks));
+        return allTasks.find(t => t.id === id);
+    },
+
+    deleteTask: (id) => {
+        let allTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+        allTasks = allTasks.filter(t => t.id !== id);
+        localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(allTasks));
+    }
+};
+
+// -------------------------------------------------------------------
+// UI & INITIALIZATION
+// -------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     const isPublicPage = window.location.pathname.endsWith('index.html') || 
                          window.location.pathname.endsWith('signup.html') ||
@@ -20,38 +96,33 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const userNameEl = document.getElementById('userName');
-    if (userNameEl) userNameEl.textContent = currentUser.name;
-
-    setupEventListeners();
-    fetchTasks();
+    // Dashboard Initialization
+    if (!isPublicPage && currentUser) {
+        const userNameEl = document.getElementById('userName');
+        if (userNameEl) userNameEl.textContent = currentUser.name;
+        
+        setupDashboardListeners();
+        loadTasks();
+    }
 });
 
-function setupEventListeners() {
+function setupDashboardListeners() {
     // Logout
     const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.onclick = () => {
-            localStorage.removeItem('todo_user');
-            window.location.href = 'index.html';
-        };
-    }
+    if (logoutBtn) logoutBtn.onclick = () => AuthService.logout();
 
     // Add Task
     const addTaskBtn = document.getElementById('addTaskBtn');
     const taskInput = document.getElementById('newTaskInput');
     if (addTaskBtn && taskInput) {
-        addTaskBtn.onclick = () => addTask();
-        taskInput.onkeypress = (e) => {
-            if (e.key === 'Enter') addTask();
-        };
+        addTaskBtn.onclick = () => handleAddTask();
+        taskInput.onkeypress = (e) => { if (e.key === 'Enter') handleAddTask(); };
     }
 
-    // Filters
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    filterBtns.forEach(btn => {
+    // Filter Buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.onclick = () => {
-            filterBtns.forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentFilter = btn.dataset.filter;
             renderTasks();
@@ -59,125 +130,63 @@ function setupEventListeners() {
     });
 }
 
-// API Calls
-async function fetchTasks() {
+// -------------------------------------------------------------------
+// ACTIONS
+// -------------------------------------------------------------------
+function loadTasks() {
     toggleLoader(true);
-    try {
-        const response = await fetch(`${API_BASE}/tasks/${currentUser.id}`);
-        if (response.ok) {
-            currentTasks = await response.json();
-            renderTasks();
-        } else {
-            showToast('Failed to fetch tasks', 'error');
-        }
-    } catch (err) {
-        showToast('Server connection failed', 'error');
-    } finally {
+    setTimeout(() => { // Simulate short delay
+        currentTasks = TaskService.getTasks(currentUser.id);
+        renderTasks();
         toggleLoader(false);
-    }
+    }, 300);
 }
 
-async function addTask() {
+function handleAddTask() {
     const input = document.getElementById('newTaskInput');
     const title = input.value.trim();
     if (!title) return;
 
-    try {
-        const response = await fetch(`${API_BASE}/tasks`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title,
-                completed: false,
-                userId: currentUser.id
-            })
-        });
-
-        if (response.ok) {
-            const newTask = await response.json();
-            currentTasks.unshift(newTask);
-            input.value = '';
-            renderTasks();
-            showToast('Task added!', 'success');
-        }
-    } catch (err) {
-        showToast('Failed to add task', 'error');
-    }
+    const newTask = TaskService.addTask(title, currentUser.id);
+    currentTasks.unshift(newTask);
+    input.value = '';
+    renderTasks();
+    showToast('Task added!', 'success');
 }
 
-async function toggleTaskStatus(id, completed) {
-    const task = currentTasks.find(t => t.id === id);
-    if (!task) return;
-
-    try {
-        const response = await fetch(`${API_BASE}/tasks/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title: task.title,
-                completed: !completed
-            })
-        });
-
-        if (response.ok) {
-            const updatedTask = await response.json();
-            currentTasks = currentTasks.map(t => t.id === id ? updatedTask : t);
-            renderTasks();
-        }
-    } catch (err) {
-        showToast('Failed to update task', 'error');
-    }
+function toggleTaskStatus(id, completed) {
+    const updated = TaskService.updateTask(id, { completed: !completed });
+    currentTasks = currentTasks.map(t => t.id === id ? updated : t);
+    renderTasks();
 }
 
-async function deleteTask(id) {
+function deleteTask(id) {
     if (!confirm('Are you sure you want to delete this task?')) return;
-
-    try {
-        const response = await fetch(`${API_BASE}/tasks/${id}`, {
-            method: 'DELETE'
-        });
-
-        if (response.ok) {
-            currentTasks = currentTasks.filter(t => t.id !== id);
-            renderTasks();
-            showToast('Task deleted', 'success');
-        }
-    } catch (err) {
-        showToast('Failed to delete task', 'error');
-    }
+    TaskService.deleteTask(id);
+    currentTasks = currentTasks.filter(t => t.id !== id);
+    renderTasks();
+    showToast('Task deleted', 'success');
 }
 
-async function editTask(id) {
+function editTask(id) {
     const task = currentTasks.find(t => t.id === id);
     const newTitle = prompt('Edit task:', task.title);
-    if (newTitle === null || newTitle.trim() === '' || newTitle === task.title) return;
+    if (!newTitle || newTitle.trim() === '' || newTitle === task.title) return;
 
-    try {
-        const response = await fetch(`${API_BASE}/tasks/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title: newTitle.trim(),
-                completed: task.completed
-            })
-        });
-
-        if (response.ok) {
-            const updatedTask = await response.json();
-            currentTasks = currentTasks.map(t => t.id === id ? updatedTask : t);
-            renderTasks();
-            showToast('Task updated!', 'success');
-        }
-    } catch (err) {
-        showToast('Failed to edit task', 'error');
-    }
+    const updated = TaskService.updateTask(id, { title: newTitle.trim() });
+    currentTasks = currentTasks.map(t => t.id === id ? updated : t);
+    renderTasks();
+    showToast('Task updated!', 'success');
 }
 
-// UI Helpers
+// -------------------------------------------------------------------
+// RENDERING & HELPERS
+// -------------------------------------------------------------------
 function renderTasks() {
     const container = document.getElementById('todoList');
     const emptyState = document.getElementById('emptyState');
-    
+    if (!container) return;
+
     let tasksToRender = currentTasks;
     if (currentFilter === 'pending') tasksToRender = currentTasks.filter(t => !t.completed);
     if (currentFilter === 'completed') tasksToRender = currentTasks.filter(t => t.completed);
@@ -193,15 +202,11 @@ function renderTasks() {
         <div class="todo-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
             <div class="todo-content">${escapeHtml(task.title)}</div>
             <div class="todo-actions">
-                <button class="icon-btn check-btn" onclick="toggleTaskStatus('${task.id}', ${task.completed})" title="${task.completed ? 'Mark as pending' : 'Mark as complete'}">
+                <button class="icon-btn check-btn" onclick="toggleTaskStatus('${task.id}', ${task.completed})">
                     ${task.completed ? '↩️' : '✅'}
                 </button>
-                <button class="icon-btn edit-btn" onclick="editTask('${task.id}')" title="Edit task">
-                    ✏️
-                </button>
-                <button class="icon-btn delete-btn" onclick="deleteTask('${task.id}')" title="Delete task">
-                    🗑️
-                </button>
+                <button class="icon-btn edit-btn" onclick="editTask('${task.id}')">✏️</button>
+                <button class="icon-btn delete-btn" onclick="deleteTask('${task.id}')">🗑️</button>
             </div>
         </div>
     `).join('');

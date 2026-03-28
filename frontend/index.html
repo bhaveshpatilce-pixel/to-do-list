@@ -48,25 +48,11 @@
             btn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    localStorage.setItem('todo_user', JSON.stringify(data));
-                    showToast('Welcome back, ' + data.name + '!', 'success');
-                    setTimeout(() => window.location.href = 'dashboard.html', 1000);
-                } else {
-                    showToast(data.error || 'Invalid credentials', 'error');
-                    btnText.textContent = 'Sign In';
-                    btn.disabled = false;
-                }
+                const user = AuthService.login(email, password);
+                showToast('Welcome back, ' + user.name + '!', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 1000);
             } catch (err) {
-                showToast('Server connection failed', 'error');
+                showToast(err.message || 'Invalid credentials', 'error');
                 btnText.textContent = 'Sign In';
                 btn.disabled = false;
             }
