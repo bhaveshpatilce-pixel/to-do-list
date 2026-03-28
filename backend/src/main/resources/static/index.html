@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | To-Do Elite</title>
+    <meta name="description" content="Secure login for your personal to-do list manager.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="glass-card">
+            <h1>Welcome Back</h1>
+            <p class="subtitle">Enter your credentials to manage your tasks</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="name@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary" id="loginBtn">
+                    <span class="btn-text-content">Sign In</span>
+                </button>
+            </form>
+            
+            <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                Don't have an account? <a href="signup.html" style="color: var(--accent); text-decoration: none;">Create one here</a>
+            </p>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="js/script.js"></script>
+    <script>
+        // Check if already logged in
+        if (localStorage.getItem('todo_user')) {
+            window.location.href = 'dashboard.html';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const btn = document.getElementById('loginBtn');
+            const btnText = btn.querySelector('.btn-text-content');
+            btnText.textContent = 'Authenticating...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('todo_user', JSON.stringify(data));
+                    showToast('Welcome back, ' + data.name + '!', 'success');
+                    setTimeout(() => window.location.href = 'dashboard.html', 1000);
+                } else {
+                    showToast(data.error || 'Invalid credentials', 'error');
+                    btnText.textContent = 'Sign In';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showToast('Server connection failed', 'error');
+                btnText.textContent = 'Sign In';
+                btn.disabled = false;
+            }
+        });
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.borderColor = type === 'success' ? 'var(--success)' : 'var(--danger)'; 
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>

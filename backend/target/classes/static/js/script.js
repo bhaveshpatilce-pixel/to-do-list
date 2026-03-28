@@ -1,5 +1,4 @@
-// Configuration
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = '/api';
 let currentUser = JSON.parse(localStorage.getItem('todo_user'));
 let currentTasks = [];
 let currentFilter = 'all';
