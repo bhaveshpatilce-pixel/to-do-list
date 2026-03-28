@@ -10,16 +10,14 @@ let currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSION));
 let currentTasks = [];
 let currentFilter = 'all';
 
-// -------------------------------------------------------------------
-// AUTHENTICATION LOGIC (Frontend Only)
-// -------------------------------------------------------------------
+
 const AuthService = {
     signup: (name, email, password) => {
         const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
         if (users.find(u => u.email === email)) {
             throw new Error('Email already exists');
         }
-        
+
         const newUser = { id: Date.now().toString(), name, email, password };
         users.push(newUser);
         localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
@@ -30,7 +28,7 @@ const AuthService = {
         const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
         const user = users.find(u => u.email === email && u.password === password);
         if (!user) throw new Error('Invalid email or password');
-        
+
         localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(user));
         return user;
     },
@@ -41,9 +39,7 @@ const AuthService = {
     }
 };
 
-// -------------------------------------------------------------------
-// TASK MANAGEMENT LOGIC (Frontend Only)
-// -------------------------------------------------------------------
+
 const TaskService = {
     getTasks: (userId) => {
         const allTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
@@ -77,14 +73,12 @@ const TaskService = {
     }
 };
 
-// -------------------------------------------------------------------
-// UI & INITIALIZATION
-// -------------------------------------------------------------------
+
 document.addEventListener('DOMContentLoaded', () => {
-    const isPublicPage = window.location.pathname.endsWith('index.html') || 
-                         window.location.pathname.endsWith('signup.html') ||
-                         window.location.pathname === '/' ||
-                         window.location.pathname === '';
+    const isPublicPage = window.location.pathname.endsWith('index.html') ||
+        window.location.pathname.endsWith('signup.html') ||
+        window.location.pathname === '/' ||
+        window.location.pathname === '';
 
     if (!currentUser && !isPublicPage) {
         window.location.href = 'index.html';
@@ -100,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isPublicPage && currentUser) {
         const userNameEl = document.getElementById('userName');
         if (userNameEl) userNameEl.textContent = currentUser.name;
-        
+
         setupDashboardListeners();
         loadTasks();
     }
@@ -130,9 +124,7 @@ function setupDashboardListeners() {
     });
 }
 
-// -------------------------------------------------------------------
-// ACTIONS
-// -------------------------------------------------------------------
+
 function loadTasks() {
     toggleLoader(true);
     setTimeout(() => { // Simulate short delay
@@ -221,7 +213,7 @@ function showToast(message, type) {
     const toast = document.getElementById('toast');
     if (!toast) return;
     toast.textContent = message;
-    toast.style.borderColor = type === 'success' ? 'var(--success)' : 'var(--danger)'; 
+    toast.style.borderColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
