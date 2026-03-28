@@ -1,4 +1,4 @@
-const API_BASE = 'https://to-do-list-production-ec7c.up.railway.app/api';
+const API_BASE = 'https://to-do-list-production-3fea.up.railway.app/api';
 let currentUser = JSON.parse(localStorage.getItem('todo_user'));
 let currentTasks = [];
 let currentFilter = 'all';
